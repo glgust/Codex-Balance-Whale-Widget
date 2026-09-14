@@ -1,0 +1,19 @@
+{
+  "name": "codex-whale-widget",
+  "version": "0.1.0+codex.20260914173634",
+  "description": "Codex adaptation of MeteorNOX Whale Widget, preserving original visuals and interactions without DSH.",
+  "author": {
+    "name": "gust"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Whale Widget",
+    "shortDescription": "\u539f\u7248\u9cb8\u9c7c\u7684 Codex \u989d\u5ea6\u9002\u914d",
+    "longDescription": "Third-party Codex adaptation of MeteorNOX Whale Widget. Reuses original artwork and interactions; independent desktop runtime without DSH.",
+    "developerName": "gust",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Help me use Codex Whale Widget."
+  },
+  "mcpServers": "./.mcp.json"
+}

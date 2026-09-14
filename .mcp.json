@@ -1,0 +1,1 @@
+{"mcpServers":{"codex-whale-widget":{"command":"node","args":["./standalone/mcp.mjs"],"cwd":".","startup_timeout_sec":15,"tool_timeout_sec":90}}}

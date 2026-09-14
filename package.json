@@ -1,12 +1,11 @@
 {
-  "name": "dsh-whale-widget",
-  "version": "0.3.0",
-  "description": "DSH Web 界面右下角的 DeepSeek 余额小鲸鱼挂件:余额/今日已用/峰谷定价、自定义泡泡点击序列(文本/余额/今日/峰谷/图片/随机语句与并列加权选择)、逐行样式与字体、悬浮快捷编辑、音效与每轮消耗、自定义角色/动图/音效、吸附与翻转自定义",
+  "name": "codex-whale-widget",
+  "version": "0.3.0-codex.1",
+  "description": "Codex adaptation of DeepSeek Balance Whale Widget: original visuals and interactions, independent desktop host, official account quota",
   "keywords": [
-    "dsh",
-    "dsh-plugin",
-    "deepseek-harness",
-    "balance",
+    "codex",
+    "codex-plugin",
+    "whale",
     "widget"
   ],
   "type": "module",
@@ -14,21 +13,27 @@
   "files": [
     "lib",
     "assets",
-    "cordis.patch.yml",
-    "README.md"
+    "desktop",
+    "standalone",
+    "skills",
+    ".codex-plugin",
+    ".mcp.json",
+    "Start-Whale.ps1",
+    "Start-Whale.cmd",
+    "README.md",
+    "UPSTREAM-README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget.git"
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test standalone/*.test.mjs",
+    "start": "electron desktop/main.cjs"
   },
-  "bugs": {
-    "url": "https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget/issues"
+  "dependencies": {
+    "electron": "44.3.0"
   },
-  "homepage": "https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget#readme",
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    }
-  },
-  "license": "MIT"
+  "engines": {
+    "node": ">=22.12.0"
+  }
 }

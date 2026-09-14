@@ -21,6 +21,12 @@ sessions/
 
 # 依赖与临时物
 node_modules/
+usage.json
+desktop-status.json
+control.json
+refresh.request
+stop.request
+dist/
 *.zip
 *.log
 *.bak

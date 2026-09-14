@@ -9,30 +9,24 @@ window.__dshWhaleWidget = true
 // 主聊天界面的特征：composer 输入区。DSH 新版输入框为 contenteditable div，旧版为 textarea，
 // 两种都算主界面；检测到才继续，否则不碰 DOM、不注册监听。
 function dshwIsChatRoot(r) {
-  return !!(r && (r.querySelector('textarea') || r.querySelector('[contenteditable="true"]')))
+  return !!(r && (r.querySelector('textarea') || r.querySelector('[contenteditable="true"]') || r.querySelector('[role="textbox"][contenteditable]')))
 }
 var dshwEnabled = false
 try {
   var dshwRoot = document.getElementById('root')
   // 初始已有 composer → 主界面
-  if (dshwIsChatRoot(dshwRoot)) {
+  if (window.__CODEX_WHALE_STANDALONE__ === true || dshwIsChatRoot(dshwRoot)) {
     dshwEnabled = true
   } else {
-    // 尚未渲染：轮询等待（主界面异步挂载），超过 5s 视为非主界面（市场/设置等）放弃
-    var dshwPollTries = 0
-    var dshwPoll = setInterval(function () {
-      dshwPollTries++
+    // 首次引导可能停留超过 5 秒；等待主聊天界面出现后再初始化。
+    var dshwObserver = new MutationObserver(function () {
       if (dshwIsChatRoot(document.getElementById('root'))) {
-        clearInterval(dshwPoll)
+        dshwObserver.disconnect()
         dshwEnabled = true
         try { dshwInit() } catch (err) {}
-        return
       }
-      if (dshwPollTries >= 10) {
-        clearInterval(dshwPoll)
-        // 非主界面：直接退出，不初始化
-      }
-    }, 500)
+    })
+    dshwObserver.observe(document.documentElement, { childList: true, subtree: true })
   }
 } catch (err) {}
 if (!dshwEnabled) {
@@ -580,7 +574,7 @@ try {
   if (initRoleId && initRoleId !== 'default') initRoleUrl = '/dsh-whale/role-image.png?id=' + encodeURIComponent(initRoleId)
 } catch (err) {}
 img.src = initRoleUrl
-img.alt = 'DeepSeek 余额'
+img.alt = window.__CODEX_WHALE_STANDALONE__ === true ? 'Codex 额度' : 'DeepSeek 余额'
 img.draggable = false
 
 var menuBtn = document.createElement('button')
@@ -1497,7 +1491,7 @@ function buildUsageSubShell() {
   // 居中小标题
   var subTitle = document.createElement('div')
   subTitle.className = 'dshwv-usage-subtitle'
-  subTitle.textContent = '- = 小鲸鱼记账 = -'
+  subTitle.textContent = window.__CODEX_WHALE_STANDALONE__ === true ? '- = Codex 用量记录 = -' : '- = 小鲸鱼记账 = -'
   usagePanel.appendChild(subTitle)
   // 预警与预算设置区(静态)
   buildUsageSettingsArea()
@@ -3006,6 +3000,11 @@ function fillUsagePanel(d) {
     hostEl.appendChild(wrap)
     return
   }
+  if (d.provider === 'codex') {
+    fillCodexUsageRecords(wrap, d.codex)
+    hostEl.appendChild(wrap)
+    return
+  }
   var today = d.today || {}
   var todayModels = today.models || []
   var hasEvToday = todayModels.length > 0
@@ -3985,12 +3984,41 @@ function usageEvTime(ev) {
     return p2(dd.getHours()) + ':' + p2(dd.getMinutes())
   } catch (err) { return '' }
 }
+function fillCodexUsageRecords(hostEl, c) {
+  c = c || {}
+  hostEl.appendChild(uSectionTitle('Codex 累计用量', apiFmtTokens(c.lifetimeTokens) + ' tokens'))
+  var hint = document.createElement('div')
+  hint.className = 'dshwv-usage-hint'
+  hint.textContent = '官方日期桶；token 用量与订阅额度百分比分别统计。' + (c.collectedAt ? ' 快照：' + c.collectedAt : '') + (c.error ? ' ⚠ ' + c.error : '')
+  hostEl.appendChild(hint)
+  hostEl.appendChild(uSectionTitle('日期', 'token 用量'))
+  var days = Array.isArray(c.dailyUsageBuckets) ? c.dailyUsageBuckets.slice() : []
+  days = days.filter(function (d) { return d && /^\d{4}-\d{2}-\d{2}$/.test(d.startDate) })
+  days.sort(function (a, b) { return a.startDate < b.startDate ? 1 : (a.startDate > b.startDate ? -1 : 0) })
+  days.forEach(function (day) {
+    var row = document.createElement('div')
+    row.className = 'dshwv-usage-row'
+    var date = document.createElement('span')
+    date.textContent = day.startDate
+    row.appendChild(date)
+    var tokens = document.createElement('span')
+    tokens.textContent = apiFmtTokens(day.tokens)
+    row.appendChild(tokens)
+    hostEl.appendChild(row)
+  })
+  if (!days.length) {
+    var empty = document.createElement('div')
+    empty.className = 'dshwv-usage-hint'
+    empty.textContent = '暂无官方日期用量数据'
+    hostEl.appendChild(empty)
+  }
+}
 function fillUsageRecordsWindow(d) {
   var card = usageMoreCard
   card.innerHTML = ''
   var title = document.createElement('div')
   title.className = 'dshwv-usage-wintitle'
-  title.textContent = '消费记录(全部)'
+  title.textContent = d && d.provider === 'codex' ? 'Codex 用量记录' : '消费记录(全部)'
   card.appendChild(title)
   var closeBtn = document.createElement('button')
   closeBtn.type = 'button'
@@ -4003,6 +4031,7 @@ function fillUsageRecordsWindow(d) {
   body.className = 'dshwv-usage-windowbody'
   card.appendChild(body)
   if (!d || !d.ok) { body.textContent = '加载失败'; return }
+  if (d.provider === 'codex') { fillCodexUsageRecords(body, d.codex); return }
   var allDays = ((d.all && d.all.days) || []).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1 })
   var evAll = ((d.all && d.all.events) || []).slice()
   // ① 概览头
@@ -5480,6 +5509,20 @@ var BUBBLE_DEFAULT_ITEMS = [
     }
 ];
 
+// 仅替换独立版出厂首泡的数据绑定，保留原模块顺序、字号、颜色和其余泡泡。
+// 服务端保存的用户配置仍由 applyBubbleCfgSeq 原样载入。
+if (window.__CODEX_WHALE_STANDALONE__ === true) {
+  BUBBLE_DEFAULT_ITEMS[0].modules.forEach(function (m) {
+    if (m.type === 'text' && m.text === 'DeepSeek 余额') m.text = 'Codex 额度已用'
+    else if (m.type === 'balance') { m.type = 'plan'; m.modelId = 'codex'; m.tpl = '{codex_percent}' }
+    else if (m.type === 'today') { m.type = 'plan'; m.modelId = 'codex'; m.tpl = '累计 {codex_lifetime} tokens' }
+    else if (m.type === 'peak') {
+      m.tpl = m.peakStyle === 'count' ? '{codex_reset}' : '{codex_window}'
+      m.type = 'plan'; m.modelId = 'codex'
+      m.color = m.offColor; m.rgb = m.offRgb; m.bg = m.offBg; m.bgRgb = m.offBgRgb
+    }
+  })
+}
 function bubbleParseDefaultItems() {
   try { return JSON.parse(JSON.stringify(BUBBLE_DEFAULT_ITEMS)) } catch (err) { return [] }
 }
@@ -9639,7 +9682,7 @@ var textBox = document.createElement('div')
 textBox.className = 'dshwv-text'
 var labelEl = document.createElement('div')
 labelEl.className = 'dshwv-label'
-labelEl.textContent = 'DeepSeek 余额'
+labelEl.textContent = window.__CODEX_WHALE_STANDALONE__ === true ? 'Codex 额度' : 'DeepSeek 余额'
 var amountEl = document.createElement('div')
 amountEl.className = 'dshwv-amount'
 var hintEl = document.createElement('div')
@@ -9964,7 +10007,7 @@ function restoreBubbleLines() {
   // 后续 setHint 首次直写分支不碰 opacity → 今日已用整行透明消失。
   labelEl.style.display = ''
   labelEl.className = 'dshwv-label'
-  labelEl.textContent = 'DeepSeek 余额'
+  labelEl.textContent = window.__CODEX_WHALE_STANDALONE__ === true ? 'Codex 额度' : 'DeepSeek 余额'
   labelEl.style.color = ''
   labelEl.style.opacity = ''
   amountEl.style.display = ''
@@ -10442,40 +10485,62 @@ function apiQuotaSummary(modelId) {
   if (!i) return '已开启（未填总量）'
   return (i.mode === 'codex' ? 'Codex · ' : (i.mode === 'auto' ? '自动 · ' : '手动 · ')) + '已用 ' + apiQuotaPctText(modelId) + ' · 剩 ' + apiFmtQuotaNum(i.left) + apiQuotaUnitSuffix(i)
 }
-// —— Codex 模式：本地会话统计（host 读 ~/.codex/sessions 得到，机器级数据）——
+// —— Codex：官方账号用量快照；兼容旧版的本地会话统计字段 ——
 function apiCodexOf(modelId) {
   var m = apiModelById(modelId)
   return (m && m.codex) || null
 }
 function apiFmtTokens(n) {
-  n = Number(n) || 0
+  if (n === null || n === undefined || n === '' || !isFinite(Number(n))) return '—'
+  n = Number(n)
   if (n >= 100000000) return (n / 100000000).toFixed(2).replace(/\.?0+$/, '') + '亿'
   if (n >= 10000) return (n / 10000).toFixed(n >= 1000000 ? 0 : 1).replace(/\.0$/, '') + '万'
   return String(Math.round(n))
 }
 function apiCodexDays7(c) {
+  if (!c || !Array.isArray(c.days7)) return null
   var s = 0
-  if (c && Array.isArray(c.days7)) for (var i = 0; i < c.days7.length; i++) s += Number(c.days7[i].tokens) || 0
+  for (var i = 0; i < c.days7.length; i++) {
+    var n = c.days7[i].tokens
+    if (n === null || n === undefined || n === '' || !isFinite(Number(n))) return null
+    s += Number(n)
+  }
   return s
+}
+function apiCodexLatestDay(c) {
+  if (!c || !Array.isArray(c.dailyUsageBuckets)) return '—'
+  var days = c.dailyUsageBuckets.filter(function (d) { return d && /^\d{4}-\d{2}-\d{2}$/.test(d.startDate) })
+  days.sort(function (a, b) { return a.startDate < b.startDate ? 1 : (a.startDate > b.startDate ? -1 : 0) })
+  return days.length ? days[0].startDate + ' · ' + apiFmtTokens(days[0].tokens) + ' tokens' : '—'
 }
 // 列表行摘要
 function apiCodexRowText(am) {
   var c = am && am.codex
   if (!c || !c.ok) return c && c.error ? ('⚠ ' + c.error) : '无 Codex 数据'
+  if (c.lifetimeTokens !== undefined || c.dailyUsageBuckets !== undefined) {
+    return 'Codex · ' + (apiCodexWindowsText(c) || '暂无额度快照') + ' · 累计 ' + apiFmtTokens(c.lifetimeTokens) + ' tokens' + (c.error ? ' · ⚠ ' + c.error : '')
+  }
   return 'Codex 今日 ' + apiFmtTokens(c.todayTokens) + ' · 近7天 ' + apiFmtTokens(apiCodexDays7(c)) + ' tokens'
 }
-// 第二期：订阅窗口（5h / 周）。host 已把 rate_limits 归一成 { primary, secondary, planType }
+// 窗口时长以服务端字段为准，primary 不一定是 5 小时。
 function apiCodexWinLabel(w, idx) {
-  if (w && w.windowMinutes) {
-    if (w.windowMinutes >= 1440) return Math.round(w.windowMinutes / 1440) + '天窗口'
-    if (w.windowMinutes >= 60) return Math.round(w.windowMinutes / 60) + 'h'
-    return w.windowMinutes + '分钟'
+  var minutes = w && (w.windowDurationMins != null ? w.windowDurationMins : w.windowMinutes)
+  if (isFinite(minutes) && minutes > 0) {
+    if (minutes % 1440 === 0) return (minutes / 1440) + '天窗口'
+    if (minutes % 60 === 0) return (minutes / 60) + 'h'
+    return minutes + '分钟'
   }
-  return idx === 0 ? '5h' : '周'
+  return '额度窗口'
+}
+function apiCodexWinPct(w) {
+  var v = w && (w.usedPercent != null ? w.usedPercent : w.usedPct)
+  return v === null || v === undefined || v === '' || !isFinite(Number(v)) ? '—' : Number(v).toFixed(1).replace(/\.0$/, '') + '%'
 }
 function apiCodexWindowReset(w) {
-  if (!w || !w.resetAt) return ''
-  var left = Number(w.resetAt) - Date.now()
+  if (!w) return ''
+  var reset = w.resetsAt != null ? Number(w.resetsAt) * 1000 : w.resetAt
+  if (reset === null || reset === undefined || reset === '') return ''
+  var left = Number(reset) - Date.now()
   if (!isFinite(left)) return ''
   if (left <= 0) return '即将重置'
   var h = Math.floor(left / 3600000)
@@ -10486,10 +10551,9 @@ function apiCodexWindowReset(w) {
 function apiCodexWindowsText(c) {
   var w = c && c.windows
   if (!w) return ''
-  var pct = function (v) { return (v === null || v === undefined) ? '--' : ((Number(v) || 0).toFixed(1).replace(/\.0$/, '') + '%') }
   var parts = []
-  if (w.primary) parts.push(apiCodexWinLabel(w.primary, 0) + ' 已用 ' + pct(w.primary.usedPct) + (apiCodexWindowReset(w.primary) ? ' · ' + apiCodexWindowReset(w.primary) : ''))
-  if (w.secondary) parts.push(apiCodexWinLabel(w.secondary, 1) + ' 已用 ' + pct(w.secondary.usedPct) + (apiCodexWindowReset(w.secondary) ? ' · ' + apiCodexWindowReset(w.secondary) : ''))
+  if (w.primary) parts.push(apiCodexWinLabel(w.primary, 0) + ' 已用 ' + apiCodexWinPct(w.primary) + (apiCodexWindowReset(w.primary) ? ' · ' + apiCodexWindowReset(w.primary) : ''))
+  if (w.secondary) parts.push(apiCodexWinLabel(w.secondary, 1) + ' 已用 ' + apiCodexWinPct(w.secondary) + (apiCodexWindowReset(w.secondary) ? ' · ' + apiCodexWindowReset(w.secondary) : ''))
   if (w.planType) parts.push(w.planType)
   return parts.join(' | ')
 }
@@ -10497,6 +10561,10 @@ function apiCodexWindowsText(c) {
 function apiCodexDetailText(modelId) {
   var c = apiCodexOf(modelId)
   if (!c || !c.ok) return c && c.error ? c.error : '无 Codex 数据'
+  if (c.lifetimeTokens !== undefined || c.dailyUsageBuckets !== undefined) {
+    return '累计 ' + apiFmtTokens(c.lifetimeTokens) + ' tokens · 最近日期桶 ' + apiCodexLatestDay(c) +
+      ' · ' + (apiCodexWindowsText(c) || '暂无额度快照') + (c.collectedAt ? ' · 快照 ' + c.collectedAt : '') + (c.error ? ' · ⚠ ' + c.error : '')
+  }
   var s = '今日 ' + apiFmtTokens(c.todayTokens) + ' · 本月 ' + apiFmtTokens(c.monthTokens) +
     ' · 累计 ' + apiFmtTokens(c.totalTokens) + ' · 近7天 ' + apiFmtTokens(apiCodexDays7(c)) +
     '（' + (c.sessions || 0) + ' 个会话文件）'
@@ -10578,6 +10646,20 @@ function bubbleContentTokenMap(m) {
     map['plan_used'] = map['plan']
     map['plan_left'] = apiPlanLeftText(m.modelId)
     map['plan_reset'] = apiPlanResetText(m.modelId)
+    var codex = apiCodexOf(m.modelId) || (window.__CODEX_WHALE_STANDALONE__ === true && m.modelId === 'codex' ? (state.codex || {}) : null)
+    if (codex) {
+      map['codex_today'] = apiFmtTokens(codex.todayTokens)
+      map['codex_week'] = apiFmtTokens(apiCodexDays7(codex))
+      map['codex_lifetime'] = apiFmtTokens(codex.lifetimeTokens)
+      map['codex_latest_day'] = apiCodexLatestDay(codex)
+      map['codex_windows'] = apiCodexWindowsText(codex) || '暂无额度快照'
+      var codexWindow = codex.windows && codex.windows.primary
+      map['codex_quota'] = codexWindow ? apiCodexWinLabel(codexWindow, 0) + ' 已用 ' + apiCodexWinPct(codexWindow) : '暂无额度快照'
+      map['codex_percent'] = codexWindow ? apiCodexWinPct(codexWindow) : '—'
+      map['codex_window'] = codexWindow ? apiCodexWinLabel(codexWindow, 0) : '暂无额度快照'
+      map['codex_reset'] = apiCodexWindowReset(codexWindow) || '—'
+      map['codex_status'] = codex.error ? '⚠ ' + codex.error : (codex.collectedAt ? '快照 ' + codex.collectedAt : '')
+    }
     return map
   }
   if (m.type === 'balance') {
@@ -10615,6 +10697,13 @@ function bubbleTplHelpItems(m) {
     add('plan', '订阅额度已用百分比')
     add('plan_left', '订阅额度剩余百分比')
     add('plan_reset', '订阅额度重置倒计时')
+    if (apiCodexOf(m.modelId)) {
+      add('codex_windows', '官方订阅窗口及已用百分比')
+      add('codex_quota', '首个官方订阅窗口已用百分比')
+      add('codex_lifetime', '官方累计 token 用量，与订阅额度百分比独立')
+      add('codex_latest_day', '官方最新日期桶及该日期的 token 用量')
+      add('codex_status', '快照时间或读取错误')
+    }
     return arr
   }
   if (m.type === 'balance') add('balance_ds', '余额数值')
@@ -11471,7 +11560,12 @@ function render() {
   // 消耗金额泡泡显示期间，余额渲染不覆盖其内容（金额行/标题行/提示行）
   if (costBubbleActive) return
   var amount, hint
-  if (state.status === 'error') {
+  if (window.__CODEX_WHALE_STANDALONE__ === true) {
+    labelEl.textContent = 'Codex 额度'
+    var cw = state.codex && state.codex.windows && state.codex.windows.primary
+    amount = cw ? apiCodexWinLabel(cw, 0) + ' 已用 ' + apiCodexWinPct(cw) : '—'
+    hint = state.message || (state.codex && state.codex.error) || (state.codex && state.codex.collectedAt ? '快照 ' + state.codex.collectedAt : '等待额度快照')
+  } else if (state.status === 'error') {
     amount = shown !== null ? fmt(shown, state.currency) : '--'
     hint = state.message ? state.message.slice(0, 14) : '获取失败 · 点击重试'
   } else if (state.balance === null) {
@@ -11605,10 +11699,11 @@ function refresh(manual) {
   fetch(BALANCE_URL, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
     .then(function (r) { return r.json() })
     .then(function (data) {
+      if (data && data.provider === 'codex' && data.codex) state.codex = data.codex
       if (data && data.ok) {
-        var nb = Number(data.totalBalance)
+        var nb = data.totalBalance === null || data.totalBalance === undefined || data.totalBalance === '' || !isFinite(Number(data.totalBalance)) ? null : Number(data.totalBalance)
         var nc = String(data.currency || 'CNY')
-        var changed = state.balance !== null && (nb !== state.balance || nc !== state.currency)
+        var changed = nb !== null && state.balance !== null && (nb !== state.balance || nc !== state.currency)
         var currencyChanged = state.currency !== null && nc !== state.currency
         state.balance = nb
         state.currency = nc
@@ -13563,6 +13658,15 @@ function isWhaleHit(e) {
   } catch (err) {
     return false
   }
+}
+// 独立桌面宿主复用原像素命中；鲸鱼 DOM 透明穿透，不能用 elementFromPoint 判断。
+if (window.__CODEX_WHALE_STANDALONE__ === true) {
+  document.addEventListener('codex-whale-hit-test', function (e) {
+    var point = e.detail
+    if (!point || typeof point.x !== 'number' || typeof point.y !== 'number' || !isFinite(point.x) || !isFinite(point.y)) return
+    var hit = !!(drag && drag.active) || isWhaleHit({ clientX: point.x, clientY: point.y })
+    document.dispatchEvent(new CustomEvent('codex-whale-hit-result', { detail: hit }))
+  })
 }
 function onDocPointerDown(e) {
   if (e.target && e.target.closest) {
