@@ -12,6 +12,8 @@
 
 订阅百分比不能换算成剩余 token；未提供的数据显示为未知。目前不提供 Codex 每轮任务结束通知或每轮消耗统计。
 
+<img src="docs/images/quota-bubble.png" alt="桌面鲸鱼展开额度气泡，显示使用比例、累计 token 和重置时间" width="960">
+
 ## 独立运行
 
 需要 Windows、Node.js 22.12+，以及已登录订阅账户的官方 Codex 客户端。桌面运行时为 Electron 44.3.0。
@@ -29,6 +31,8 @@ npm start
 点击角色显示气泡，按住拖动；使用原版菜单调整外观和音效。托盘菜单可显示、隐藏、刷新或退出，隐藏时仍继续采集。
 
 托盘中可选“随 Codex 启动（需启用插件）”，默认关闭。开启后，在 Codex 加载本插件的 MCP 服务时自动打开鲸鱼，无需模型对话；插件禁用时不会触发。此选项不消除启用插件本身的上下文开销。
+
+<img src="docs/images/tray-menu.png" alt="鲸鱼托盘菜单，包括显示、隐藏、刷新和随 Codex 启动选项" width="420">
 
 ## 使用入口
 
@@ -54,6 +58,10 @@ codex plugin add codex-whale-widget@personal
 ```
 
 新建会话后可以说：“打开鲸鱼，查看我的 Codex 额度。”插件提供 `get_usage`、`show_whale`、`close_whale`、`refresh_whale` 和 `desktop_status`。更新源码后需按 `plugin-creator` 的更新流程重新安装。
+
+<img src="docs/images/plugin-entry.png" alt="在 Codex 插件选择器中选择 Codex Whale Widget" width="760">
+
+插件入口示意；截图为图标更新前的界面。
 
 ## 数据与隐私
 
