@@ -19,10 +19,10 @@ jobs:
         shell: pwsh
         run: |
           $env:WHALE_SMOKE_REPORT = Join-Path $PWD 'dist/smoke-report.json'
-          $process = Start-Process -FilePath 'dist/win-unpacked/Codex Whale Widget.exe' -ArgumentList '--smoke-test' -WindowStyle Hidden -Wait -PassThru
+          $process = Start-Process -FilePath (Resolve-Path 'dist/win-unpacked/Codex Whale Widget.exe').Path -ArgumentList '--smoke-test' -WindowStyle Hidden -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw 'Packaged smoke test failed' }
           $report = Get-Content $env:WHALE_SMOKE_REPORT -Raw | ConvertFrom-Json
-          if (-not $report.ok -or -not $report.packaged) { throw 'Invalid smoke report' }
+          if (-not $report.ok -or -not $report.packaged -or $report.quotaWindows.Count -ne 6) { throw 'Invalid smoke report' }
       - uses: actions/upload-artifact@v4
         with:
           name: windows-x64-installer

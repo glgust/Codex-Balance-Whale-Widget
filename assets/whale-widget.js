@@ -10536,6 +10536,28 @@ function apiCodexWinPct(w) {
   var v = w && (w.usedPercent != null ? w.usedPercent : w.usedPct)
   return v === null || v === undefined || v === '' || !isFinite(Number(v)) ? '—' : Number(v).toFixed(1).replace(/\.0$/, '') + '%'
 }
+function apiCodexMainWindow(c) {
+  var w = c && c.windows
+  return w && (w.primary || w.secondary)
+}
+// Render-only expansion also covers saved first-bubble configurations from older versions.
+// Keep single-window accounts and custom bubbles unchanged; never infer limits from plan names.
+function bubbleCodexWindowModules(mods) {
+  if (window.__CODEX_WHALE_STANDALONE__ !== true || !Array.isArray(mods)) return mods
+  var quota = mods.find(function (m) { return m.type === 'plan' && m.modelId === 'codex' && m.tpl === '{codex_percent}' })
+  var resetIndex = mods.findIndex(function (m) { return m.type === 'plan' && m.modelId === 'codex' && m.tpl === '{codex_reset}' })
+  if (!quota || resetIndex < 0 || mods.some(function (m) { return String(m.tpl || '').indexOf('{codex_windows}') >= 0 })) return mods
+  var c = apiCodexOf('codex') || state.codex
+  var w = c && c.windows
+  if (!w || !w.primary || !w.secondary) return mods
+  var extra = [
+    { type: 'text', text: apiCodexWinLabel(w.secondary, 1) + ' 已用 ' + apiCodexWinPct(w.secondary), size: 2, color: '#526ab0', bold: true },
+    { type: 'text', text: apiCodexWindowReset(w.secondary), size: 2, color: '#526ab0' }
+  ]
+  return mods.slice(0, resetIndex + 1).concat(extra, mods.slice(resetIndex + 1)).map(function (m) {
+    return m === quota ? Object.assign({}, m, { size: Math.min(Number(m.size) || 20, 6) }) : m
+  })
+}
 function apiCodexWindowReset(w) {
   if (!w) return ''
   var reset = w.resetsAt != null ? Number(w.resetsAt) * 1000 : w.resetAt
@@ -10653,7 +10675,7 @@ function bubbleContentTokenMap(m) {
       map['codex_lifetime'] = apiFmtTokens(codex.lifetimeTokens)
       map['codex_latest_day'] = apiCodexLatestDay(codex)
       map['codex_windows'] = apiCodexWindowsText(codex) || '暂无额度快照'
-      var codexWindow = codex.windows && codex.windows.primary
+      var codexWindow = apiCodexMainWindow(codex)
       map['codex_quota'] = codexWindow ? apiCodexWinLabel(codexWindow, 0) + ' 已用 ' + apiCodexWinPct(codexWindow) : '暂无额度快照'
       map['codex_percent'] = codexWindow ? apiCodexWinPct(codexWindow) : '—'
       map['codex_window'] = codexWindow ? apiCodexWinLabel(codexWindow, 0) : '暂无额度快照'
@@ -11027,6 +11049,7 @@ function bubbleRowContentOf(mod) {
 // 把模块追加为行到指定父容器(真实泡泡 textBox 与编辑器预览共用;旧配置每模块一行 → 与旧版逐像素一致)
 function bubbleRowsTo(parentEl, mods) {
   if (!parentEl || !Array.isArray(mods)) return
+  mods = bubbleCodexWindowModules(mods)
   var old = parentEl.querySelectorAll('.dshwv-trow, .dshwv-mimg')
   for (var i = 0; i < old.length; i++) { try { parentEl.removeChild(old[i]) } catch (err) {} }
   var ROW_MAX = 6 // 泡泡行数上限(维持旧版)
@@ -11562,8 +11585,8 @@ function render() {
   var amount, hint
   if (window.__CODEX_WHALE_STANDALONE__ === true) {
     labelEl.textContent = 'Codex 额度'
-    var cw = state.codex && state.codex.windows && state.codex.windows.primary
-    amount = cw ? apiCodexWinLabel(cw, 0) + ' 已用 ' + apiCodexWinPct(cw) : '—'
+    var cw = apiCodexMainWindow(state.codex)
+    amount = cw ? apiCodexWindowsText(state.codex) : '—'
     hint = state.message || (state.codex && state.codex.error) || (state.codex && state.codex.collectedAt ? '快照 ' + state.codex.collectedAt : '等待额度快照')
   } else if (state.status === 'error') {
     amount = shown !== null ? fmt(shown, state.currency) : '--'

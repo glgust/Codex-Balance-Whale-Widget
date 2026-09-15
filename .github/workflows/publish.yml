@@ -14,3 +14,11 @@ jobs:
           node-version: '24'
       - run: npm ci
       - run: npm test
+      - name: Check quota windows in hidden desktop runtime
+        shell: pwsh
+        run: |
+          $env:WHALE_SMOKE_REPORT = Join-Path $env:RUNNER_TEMP 'whale-smoke.json'
+          $process = Start-Process -FilePath (Resolve-Path 'node_modules/electron/dist/electron.exe').Path -ArgumentList 'desktop/smoke.cjs' -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Desktop smoke test failed' }
+          $report = Get-Content $env:WHALE_SMOKE_REPORT -Raw | ConvertFrom-Json
+          if (-not $report.ok -or $report.quotaWindows.Count -ne 6) { throw 'Invalid smoke report' }

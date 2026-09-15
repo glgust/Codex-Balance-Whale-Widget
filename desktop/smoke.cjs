@@ -9,15 +9,16 @@ app.setPath('userData',path.join(directory,'profile'));
 let server,win;
 let exitCode=0;
 const result={ok:false,packaged:app.isPackaged};
-const timeout=setTimeout(()=>{result.error='Packaged smoke test timed out';finish(1);},30000);
+const timeout=setTimeout(()=>{result.error='Packaged smoke test timed out';finish(1);},60000);
 function finish(code){
  if(process.env.WHALE_SMOKE_REPORT)fs.writeFileSync(process.env.WHALE_SMOKE_REPORT,JSON.stringify(result,null,2));
  app.exit(code);
 }
 app.whenReady().then(async()=>{
  const {startServer}=await import('../standalone/server.mjs');
- server=await startServer({dataDir:directory,readUsageFn:async()=>({collectedAt:new Date().toISOString(),rateLimits:{primary:{usedPercent:25,windowDurationMins:10080,resetsAt:2000000000}},summary:{lifetimeTokens:1234}})});
- win=new BrowserWindow({show:false,webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false}});
+ let windows={primary:{usedPercent:25,windowDurationMins:10080,resetsAt:2000000000}};
+ server=await startServer({dataDir:directory,readUsageFn:async()=>({collectedAt:new Date().toISOString(),rateLimits:windows,summary:{lifetimeTokens:1234}})});
+ win=new BrowserWindow({show:false,width:1000,height:800,webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,backgroundThrottling:false}});
  win.webContents.setAudioMuted(true);
  await win.loadURL(server.url);
  const checks=await win.webContents.executeJavaScript(`(async()=>{
@@ -30,7 +31,9 @@ app.whenReady().then(async()=>{
    return {imageWidth:im?.naturalWidth||0,audioStatus:audio.status,audioDuration:decoded.duration,unauthenticatedStatus:rejected.status,bridge:typeof require==='undefined'};
  })()`);
  assert.ok(checks.imageWidth>0);assert.equal(checks.audioStatus,200);assert.ok(checks.audioDuration>0);assert.equal(checks.unauthenticatedStatus,401);assert.ok(checks.bridge);
- result.ok=true;result.checks=checks;
+ result.checks=checks;
+ result.quotaWindows=await require('./quota-check.cjs')(win,server,value=>{windows=value;});
+ result.ok=true;
 }).catch(error=>{exitCode=1;result.error=error.stack;}).finally(async()=>{
  clearTimeout(timeout);win?.destroy();await server?.close();finish(exitCode);
 });

@@ -14,6 +14,7 @@ files:
   - desktop/main.cjs
   - desktop/entry.cjs
   - desktop/smoke.cjs
+  - desktop/quota-check.cjs
   - desktop/preload.cjs
   - desktop/settings.cjs
   - standalone/server.mjs
