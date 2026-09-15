@@ -28,6 +28,19 @@ npm start
 
 点击角色显示气泡，按住拖动；使用原版菜单调整外观和音效。托盘菜单可显示、隐藏、刷新或退出，隐藏时仍继续采集。
 
+托盘中可选“随 Codex 启动（需启用插件）”，默认关闭。开启后，在 Codex 加载本插件的 MCP 服务时自动打开鲸鱼，无需模型对话；插件禁用时不会触发。此选项不消除启用插件本身的上下文开销。
+
+## 使用入口
+
+| 入口 | 使用方式 |
+| --- | --- |
+| 桌面快捷方式 | 运行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\Create-DesktopShortcut.ps1` 创建带鲸鱼图标的“Codex 小鲸鱼”，之后双击启动。 |
+| 项目目录 | 双击 `Start-Whale.cmd`，或运行 `npm start`。 |
+| Windows 托盘 | 显示、隐藏、刷新、退出，以及勾选“随 Codex 启动”。 |
+| Codex 插件 | 在插件选择器中选择 **Codex Whale Widget**，发送“打开鲸鱼”或“查看额度”。 |
+
+桌面启动和托盘操作不发起模型对话；在 Codex 中发送请求仍会产生正常的对话消耗。桌面入口不要求启用插件。
+
 ## 安装到 Codex
 
 先完成上述依赖安装，再让 Codex 使用内置 `plugin-creator` 将完整项目注册到个人插件市场：插件名为 `codex-whale-widget`，源目录为 `~/plugins/codex-whale-widget`。保留完整项目及 `node_modules`。

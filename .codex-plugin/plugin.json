@@ -1,6 +1,6 @@
 {
   "name": "codex-whale-widget",
-  "version": "0.1.0+codex.20260914173634",
+  "version": "0.1.0+codex.20260915084419",
   "description": "Codex adaptation of MeteorNOX Whale Widget, preserving original visuals and interactions without DSH.",
   "author": {
     "name": "gust"
@@ -13,7 +13,10 @@
     "developerName": "gust",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "Help me use Codex Whale Widget."
+    "defaultPrompt": "Help me use Codex Whale Widget.",
+    "composerIcon": "./assets/DSniang1.png",
+    "logo": "./assets/DSniang1.png",
+    "logoDark": "./assets/DSniang1.png"
   },
   "mcpServers": "./.mcp.json"
 }

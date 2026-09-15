@@ -20,6 +20,7 @@
     ".mcp.json",
     "Start-Whale.ps1",
     "Start-Whale.cmd",
+    "Create-DesktopShortcut.ps1",
     "README.md",
     "UPSTREAM-README.md",
     "LICENSE",

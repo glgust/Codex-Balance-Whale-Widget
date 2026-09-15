@@ -3,6 +3,7 @@ const {app,BrowserWindow,Tray,Menu,nativeImage,screen,ipcMain}=require('electron
 const path=require('node:path');
 const fs=require('node:fs');
 const os=require('node:os');
+const {readSettings,writeSettings}=require('./settings.cjs');
 const stateDir=path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'.local','share'),'CodexWhaleWidget');
 app.setName('Codex Whale Widget');
 app.setPath('userData',path.join(stateDir,'desktop-profile'));
@@ -21,7 +22,7 @@ else {
   // Keep the original full viewport without making apps underneath look hidden.
   win=new BrowserWindow({...area,type:'toolbar',skipTaskbar:true,frame:false,transparent:true,backgroundColor:'#00000000',resizable:false,alwaysOnTop:true,show:false,title:'Codex Whale · Original Widget',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
   win.setMenu(null);
-  win.webContents.on('console-message',(_event,details)=>{if(details.level==='error')fs.appendFileSync(path.join(stateDir,'renderer.log'),String(details.message)+'\n');});
+  win.webContents.on('console-message',(details)=>{if(details.level==='error')fs.appendFileSync(path.join(stateDir,'renderer.log'),String(details.message)+'\n');});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(new URL(url).origin!==server.origin)event.preventDefault();});
   win.webContents.session.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
@@ -33,6 +34,11 @@ else {
    {label:'显示鲸鱼',click:()=>win.show()},
    {label:'隐藏鲸鱼（继续刷新）',click:()=>win.hide()},
    {label:'刷新 Codex 额度',click:()=>server.refresh()},
+   {type:'separator'},
+   {label:'随 Codex 启动（需启用插件）',type:'checkbox',checked:readSettings(stateDir).startWithCodex,click:item=>{
+    try{writeSettings(stateDir,{startWithCodex:item.checked});}
+    catch(error){item.checked=readSettings(stateDir).startWithCodex;require('electron').dialog.showErrorBox('无法保存启动设置',error.message);}
+   }},
    {type:'separator'},{label:'退出',click:()=>app.quit()}
   ]));
   tray.on('double-click',()=>win.show());

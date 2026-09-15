@@ -5,6 +5,7 @@ import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {homedir} from 'node:os';
 import {readUsage, closeUsageClient} from './collector.mjs';
+import settings from '../desktop/settings.cjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const data=join(process.env.LOCALAPPDATA || join(homedir(), '.local','share'), 'CodexWhaleWidget');
@@ -56,7 +57,18 @@ async function call(name){
   throw new Error('Unknown tool');
 }
 const send=value=>process.stdout.write(JSON.stringify(value)+'\n');
+let autoStartAttempted=false;
+async function autoStart(){
+  if(autoStartAttempted)return;
+  autoStartAttempted=true;
+  if(process.platform!=='win32'||!settings.readSettings(data).startWithCodex)return;
+  // Do not reveal a whale the user deliberately hid, or block MCP initialization.
+  if((await status()).running)return;
+  try{await call('show_whale');}
+  catch(error){process.stderr.write(`Whale auto-start failed: ${error.message}\n`);}
+}
 async function handle(message){
+  if(message.method==='notifications/initialized'){void autoStart();return;}
   if(message.id===undefined)return;
   try{
     let result;
