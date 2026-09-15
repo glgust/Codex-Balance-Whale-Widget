@@ -41,6 +41,8 @@ npm start
 
 桌面启动和托盘操作不发起模型对话；在 Codex 中发送请求仍会产生正常的对话消耗。桌面入口不要求启用插件。
 
+> 通过对话让 Codex 调用插件启动鲸鱼，会消耗一定订阅额度，建议交给消耗较低的模型执行。双击桌面快捷方式或使用“随 Codex 启动”选项无需模型对话。
+
 ## 安装到 Codex
 
 先完成上述依赖安装，再让 Codex 使用内置 `plugin-creator` 将完整项目注册到个人插件市场：插件名为 `codex-whale-widget`，源目录为 `~/plugins/codex-whale-widget`。保留完整项目及 `node_modules`。
