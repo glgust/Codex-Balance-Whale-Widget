@@ -1,0 +1,31 @@
+name: Build Windows installer
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist:win
+      - name: Verify packaged runtime
+        shell: pwsh
+        run: |
+          $env:WHALE_SMOKE_REPORT = Join-Path $PWD 'dist/smoke-report.json'
+          $process = Start-Process -FilePath 'dist/win-unpacked/Codex Whale Widget.exe' -ArgumentList '--smoke-test' -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Packaged smoke test failed' }
+          $report = Get-Content $env:WHALE_SMOKE_REPORT -Raw | ConvertFrom-Json
+          if (-not $report.ok -or -not $report.packaged) { throw 'Invalid smoke report' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-installer
+          path: |
+            dist/*Setup*.exe
+            dist/smoke-report.json

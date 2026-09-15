@@ -1,0 +1,42 @@
+appId: io.github.glgust.codex-whale-widget
+productName: Codex Whale Widget
+electronVersion: 44.3.0
+asar: false
+npmRebuild: false
+directories:
+  output: dist
+extraMetadata:
+  main: desktop/entry.cjs
+files:
+  - package.json
+  - lib/**/*
+  - assets/**/*
+  - desktop/main.cjs
+  - desktop/entry.cjs
+  - desktop/smoke.cjs
+  - desktop/preload.cjs
+  - desktop/settings.cjs
+  - standalone/server.mjs
+  - standalone/collector.mjs
+  - LICENSE
+  - THIRD_PARTY_NOTICES.md
+extraFiles:
+  - from: node_modules/electron/dist/LICENSE
+    to: LICENSE.electron.txt
+win:
+  icon: assets/whale.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  signtoolOptions: null
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Codex 小鲸鱼
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  artifactName: Codex-Whale-Widget-Setup-${version}-${arch}.${ext}

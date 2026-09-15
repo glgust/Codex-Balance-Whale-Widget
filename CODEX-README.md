@@ -16,7 +16,11 @@
 
 ## 独立运行
 
-需要 Windows、Node.js 22.12+，以及已登录订阅账户的官方 Codex 客户端。桌面运行时为 Electron 44.3.0。
+推荐 Windows x64 用户从 [Releases](https://github.com/glgust/Codex-Balance-Whale-Widget/releases/latest) 下载 `Codex-Whale-Widget-Setup-…-x64.exe`，按向导安装后打开桌面的“Codex 小鲸鱼”。安装包自带桌面运行时，无需安装 Node.js 或运行 npm；需要本机已有登录的官方 Codex 客户端。
+
+安装包目前未进行代码签名，Windows 可能显示未知发布者。Release 同时提供 SHA-256 校验文件。卸载保留个人设置；“随 Codex 启动”仍需另行启用下文的 Codex 插件。
+
+从源码运行需要 Windows、Node.js 22.12+，以及已登录订阅账户的官方 Codex 客户端。桌面运行时为 Electron 44.3.0。
 
 下载源码，在项目目录执行：
 
@@ -74,6 +78,8 @@ codex plugin add codex-whale-widget@personal
 ```powershell
 npm test
 ```
+
+在 Windows 上运行 `npm run dist:win` 构建 x64 安装包，产物位于 `dist/`。打包保留原项目和 Electron/Chromium 的许可声明。
 
 ## 署名与许可
 

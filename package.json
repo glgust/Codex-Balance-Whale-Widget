@@ -1,6 +1,6 @@
 {
   "name": "codex-whale-widget",
-  "version": "0.3.0-codex.1",
+  "version": "0.3.0-codex.2",
   "description": "Codex adaptation of DeepSeek Balance Whale Widget: original visuals and interactions, independent desktop host, official account quota",
   "keywords": [
     "codex",
@@ -29,12 +29,14 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test standalone/*.test.mjs",
-    "start": "electron desktop/main.cjs"
-  },
-  "dependencies": {
-    "electron": "44.3.0"
+    "start": "electron desktop/main.cjs",
+    "dist:win": "electron-builder --config electron-builder.yml --win nsis --x64 --publish never"
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "electron": "44.3.0",
+    "electron-builder": "26.15.3"
   }
 }
